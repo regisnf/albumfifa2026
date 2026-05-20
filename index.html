@@ -5,16 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#01696f" />
   <meta name="description" content="Coleção de figurinhas da Copa do Mundo 2026" />
-  <title>Figurinhas Copa 2026 · v2.1</title>
+  <title>Figurinhas Copa 2026 · v3.0</title>
 
   <link rel="manifest" href="./manifest.webmanifest" />
   <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js"></script>
 
   <style>
+    /* (mesmo CSS da 2.1, sem mudanças estruturais – mantive igual ao que já está funcionando) */
     :root, [data-theme="light"] {
       --color-bg: #f7f6f2;
       --color-surface: #f9f8f5;
@@ -195,9 +195,9 @@
             <path d="M14 20h8M14 26h8M14 32h5" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path>
           </svg>
           <div>
-            <p class="tiny" style="text-transform: uppercase; letter-spacing: .12em;">Copa do Mundo 2026 · versão 2.1</p>
+            <p class="tiny" style="text-transform: uppercase; letter-spacing: .12em;">Copa do Mundo 2026 · versão 3.0</p>
             <h1 class="page-title">Minha coleção de figurinhas</h1>
-            <p class="muted">Importe sua planilha, acompanhe progresso, filtre por status e exporte listas de códigos.</p>
+            <p class="muted">Estado local rápido, com sincronização manual via Google Sheets.</p>
           </div>
         </div>
         <div class="flex gap-2 items-center flex-wrap">
@@ -210,7 +210,7 @@
       <div class="flex items-start gap-3">
         <div id="feedbackIcon" class="status-chip status-have">Status</div>
         <div class="grid gap-1">
-          <strong id="feedbackTitle">Importação</strong>
+          <strong id="feedbackTitle">Situação</strong>
           <div id="feedbackMessage" class="muted"></div>
         </div>
       </div>
@@ -286,7 +286,7 @@
         <div class="flex items-start justify-between gap-4 flex-wrap mb-4">
           <div>
             <h2 class="section-title">Busca e visualização</h2>
-            <p class="muted">Pesquise em tempo real e combine filtros por status, país e grupo.</p>
+            <p class="muted">Busca instantânea limitada aos 20 primeiros resultados para manter a tela limpa.</p>
           </div>
           <div class="pill-toggle" id="statusToggle">
             <button class="active" data-status="all">Todas</button>
@@ -314,7 +314,7 @@
           </div>
         </div>
         <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
-          <p class="muted"><span id="resultsCount">0</span> figurinhas mostradas.</p>
+          <p class="muted" id="resultsLabel"><span id="resultsCount">0</span> figurinhas mostradas.</p>
           <button id="resetFilters" class="btn btn-secondary"><i data-lucide="rotate-ccw"></i><span>Limpar filtros</span></button>
         </div>
         <div id="stickerGrid" class="sticker-grid"></div>
@@ -342,9 +342,9 @@
           </div>
 
           <div class="grid gap-3 md:grid-cols-3">
-            <button id="exportDuplicatesCodes" class="btn btn-secondary"><i data-lucide="download"></i><span>Exportar repetidas</span></button>
-            <button id="exportMissingCodes" class="btn btn-secondary"><i data-lucide="download"></i><span>Exportar as que preciso</span></button>
-            <button id="exportHaveCodes" class="btn btn-secondary"><i data-lucide="download"></i><span>Exportar as que tenho</span></button>
+            <button id="exportDuplicatesCodes" class="btn btn-secondary"><i data-lucide="download"></i><span>Repetidas</span></button>
+            <button id="exportMissingCodes" class="btn btn-secondary"><i data-lucide="download"></i><span>Preciso</span></button>
+            <button id="exportHaveCodes" class="btn btn-secondary"><i data-lucide="download"></i><span>Tenho</span></button>
           </div>
 
           <label class="tiny" for="exportOutput">Saída</label>
@@ -354,15 +354,17 @@
 
         <article class="card surface export-box">
           <div>
-            <h2 class="section-title">Backup em Excel</h2>
-            <p class="muted">Importe ou exporte sua planilha completa.</p>
+            <h2 class="section-title">Sincronização com Google Sheets</h2>
+            <p class="muted">Use uma aba do Google Sheets como “banco central” da coleção.</p>
           </div>
           <div class="grid gap-3">
-            <label class="btn btn-secondary w-full" for="excelInput"><i data-lucide="file-up"></i><span>Importar Excel</span></label>
-            <input id="excelInput" type="file" accept=".xlsx,.xls" class="sr-only" />
-            <button id="exportWorkbook" class="btn btn-secondary w-full"><i data-lucide="sheet"></i><span>Exportar planilha completa</span></button>
+            <button id="syncPush" class="btn btn-secondary w-full"><i data-lucide="upload-cloud"></i><span>Enviar coleção para Sheets</span></button>
+            <button id="syncPull" class="btn btn-danger w-full"><i data-lucide="download-cloud"></i><span>Carregar coleção do Sheets</span></button>
           </div>
-          <div class="tiny">Formato esperado de colunas: ID, código, país, nome, quantidade, repetidas (nome do cabeçalho não importa).</div>
+          <div class="tiny">
+            Enviar substitui o conteúdo da aba no Sheets.
+            Carregar sobrescreve o estado local após a sua confirmação.
+          </div>
         </article>
       </section>
     </main>
@@ -403,7 +405,8 @@
   </div>
 
   <script>
-    const db = new Dexie('StickerCollectionDB_v2_1');
+    const SHEETS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxDC69XhVOXkVIgNl7z5p-HQG6ClW5gxOrwDyaLBOcArOSFj0Q5P_daO5-HWbIP_Rke/exec';
+    const db = new Dexie('StickerCollectionDB_v3_0');
     db.version(1).stores({ stickers: 'id, code, country, name, quantity, duplicates, prefix, searchable' });
 
     const state = {
@@ -430,6 +433,7 @@
       statusToggle: document.getElementById('statusToggle'),
       stickerGrid: document.getElementById('stickerGrid'),
       resultsCount: document.getElementById('resultsCount'),
+      resultsLabel: document.getElementById('resultsLabel'),
       resetFilters: document.getElementById('resetFilters'),
       exportOutput: document.getElementById('exportOutput'),
       albumFilter: document.getElementById('albumFilter'),
@@ -448,7 +452,12 @@
       previewDuplicates: document.getElementById('previewDuplicates'),
       confirmQuickAdd: document.getElementById('confirmQuickAdd'),
       themeToggle: document.getElementById('themeToggle'),
-      excelInput: document.getElementById('excelInput')
+      syncPush: document.getElementById('syncPush'),
+      syncPull: document.getElementById('syncPull'),
+      exportDuplicatesCodes: document.getElementById('exportDuplicatesCodes'),
+      exportMissingCodes: document.getElementById('exportMissingCodes'),
+      exportHaveCodes: document.getElementById('exportHaveCodes'),
+      copyExport: document.getElementById('copyExport')
     };
 
     function setTheme(theme) {
@@ -460,7 +469,7 @@
       lucide.createIcons();
     }
 
-    function showImportFeedback(type, title, message) {
+    function showFeedback(type, title, message) {
       const styles = {
         success: { chip: 'status-chip status-have', label: 'Sucesso' },
         error: { chip: 'status-chip status-duplicate', label: 'Erro' },
@@ -474,22 +483,14 @@
       el.feedbackMessage.innerHTML = message;
     }
 
-    function normalizeRow(row, index) {
-      const values = Array.isArray(row) ? row : Object.values(row);
-      const id = Number(values[0] ?? 0);
-      const code = String(values[1] ?? '').trim();
-      const country = String(values[2] ?? '').trim();
-      const name = String(values[3] ?? '').trim();
-      const quantity = Number(values[4] ?? 0) || 0;
-      const rawDuplicates = Number(values[5] ?? Math.max(quantity - 1, 0)) || 0;
-
-      if (!id || !code) {
-        throw new Error(`Linha ${index + 2}: as colunas 1 (ID) e 2 (código) são obrigatórias.`);
-      }
-      if (quantity < 0) {
-        throw new Error(`Linha ${index + 2}: a quantidade não pode ser negativa.`);
-      }
-
+    function normalizeRowFromSheets(s) {
+      const id = Number(s.id ?? 0);
+      const code = String(s.code ?? '').trim();
+      const country = String(s.country ?? '').trim();
+      const name = String(s.name ?? '').trim();
+      const quantity = Number(s.quantity ?? 0) || 0;
+      const rawDuplicates = Number(s.duplicates ?? Math.max(quantity - 1, 0)) || 0;
+      if (!id || !code) return null;
       const duplicates = Math.max(quantity - 1, 0, rawDuplicates);
       const prefix = code.match(/^[A-Za-z]+/)?.[0] || 'OUT';
       return {
@@ -544,7 +545,7 @@
 
       el.countryProgressCount.textContent = `${grouped.length} países`;
       if (!grouped.length) {
-        el.countryProgressList.innerHTML = '<div class="empty-state">Importe a planilha para ver o progresso por país.</div>';
+        el.countryProgressList.innerHTML = '<div class="empty-state">Ainda não há dados carregados. Sincronize com o Sheets ou carregue um demo.</div>';
         return;
       }
       el.countryProgressList.innerHTML = grouped.map(item => {
@@ -577,12 +578,25 @@
 
     function renderGrid() {
       state.filtered = getFilteredStickers();
-      el.resultsCount.textContent = state.filtered.length;
-      if (!state.filtered.length) {
+      const total = state.filtered.length;
+      const limit = 20;
+
+      let toRender = state.filtered;
+      if (total > limit) {
+        toRender = state.filtered.slice(0, limit);
+        el.resultsLabel.textContent = `Mostrando ${limit} de ${total} figurinhas (limite da busca).`;
+      } else {
+        el.resultsLabel.textContent = `Mostrando ${total} figurinhas.`;
+      }
+
+      if (!toRender.length) {
         el.stickerGrid.innerHTML = '<div class="empty-state surface card" style="grid-column: 1 / -1;">Nenhuma figurinha corresponde aos filtros atuais.</div>';
+        el.resultsCount.textContent = 0;
         return;
       }
-      el.stickerGrid.innerHTML = state.filtered.map(sticker => {
+      el.resultsCount.textContent = toRender.length;
+
+      el.stickerGrid.innerHTML = toRender.map(sticker => {
         const statusClass = sticker.duplicates > 0 ? 'duplicate' : sticker.quantity > 0 ? 'have' : '';
         const statusChip = sticker.duplicates > 0
           ? '<span class="status-chip status-duplicate">Duplicadas</span>'
@@ -633,6 +647,7 @@
       el.countryFilter.addEventListener('change', renderGrid);
       el.groupFilter.addEventListener('change', renderGrid);
       el.albumFilter.addEventListener('change', renderGrid);
+
       document.getElementById('refreshCountryProgress').addEventListener('click', updateDashboard);
       el.resetFilters.addEventListener('click', () => {
         el.searchInput.value = '';
@@ -643,6 +658,7 @@
         [...el.statusToggle.querySelectorAll('button')].forEach(btn => btn.classList.toggle('active', btn.dataset.status === 'all'));
         renderGrid();
       });
+
       el.statusToggle.addEventListener('click', event => {
         const button = event.target.closest('button[data-status]');
         if (!button) return;
@@ -650,6 +666,7 @@
         [...el.statusToggle.querySelectorAll('button')].forEach(btn => btn.classList.toggle('active', btn === button));
         renderGrid();
       });
+
       el.stickerGrid.addEventListener('click', event => {
         const plus = event.target.closest('.quick-plus');
         const minus = event.target.closest('.quick-minus');
@@ -657,15 +674,13 @@
         if (minus) adjustQuantity(minus.dataset.id, -1);
       });
 
-      document.getElementById('exportDuplicatesCodes').addEventListener('click', () => exportCodeList('duplicates'));
-      document.getElementById('exportMissingCodes').addEventListener('click', () => exportCodeList('missing'));
-      document.getElementById('exportHaveCodes').addEventListener('click', () => exportCodeList('have'));
-      document.getElementById('copyExport').addEventListener('click', async () => {
+      el.exportDuplicatesCodes.addEventListener('click', () => exportCodeList('duplicates'));
+      el.exportMissingCodes.addEventListener('click', () => exportCodeList('missing'));
+      el.exportHaveCodes.addEventListener('click', () => exportCodeList('have'));
+      el.copyExport.addEventListener('click', async () => {
         if (!el.exportOutput.value) return;
         await navigator.clipboard.writeText(el.exportOutput.value);
       });
-
-      document.getElementById('exportWorkbook').addEventListener('click', () => exportWorkbook(state.stickers, 'colecao-copa-2026.xlsx'));
 
       document.getElementById('orderAlbum').addEventListener('change', () => { state.exportOrder = 'album'; });
       document.getElementById('orderAlpha').addEventListener('change', () => { state.exportOrder = 'alpha'; });
@@ -691,57 +706,11 @@
         if (event.key === 'Escape') closeQuickAdd();
       });
 
-      el.excelInput.addEventListener('change', importExcelFile);
+      el.syncPush.addEventListener('click', syncPushToSheets);
+      el.syncPull.addEventListener('click', syncPullFromSheets);
 
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./service-worker.js').catch(() => {});
-      }
-    }
-
-    async function importExcelFile(event) {
-      const file = event.target.files?.[0];
-      if (!file) return;
-      try {
-        const data = await file.arrayBuffer();
-        const workbook = XLSX.read(data, { type: 'array' });
-        if (!workbook.SheetNames.length) {
-          throw new Error('O arquivo não possui nenhuma aba disponível para importação.');
-        }
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-
-        if (rows.length < 2) {
-          throw new Error('A planilha precisa ter pelo menos 2 linhas: uma de cabeçalho e uma com dados.');
-        }
-
-        const header = rows[0];
-        const dataRows = rows.slice(1).filter(row => Array.isArray(row) && row.some(cell => String(cell).trim() !== ''));
-
-        if (header.length < 6) {
-          throw new Error('O cabeçalho encontrado tem menos de 6 colunas. O importador versão 2.1 espera as 6 primeiras colunas nesta ordem: ID, código, país, nome, quantidade e repetidas. Os nomes podem ser quaisquer, mas a posição das colunas precisa seguir essa ordem.');
-        }
-        if (!dataRows.length) {
-          throw new Error('A planilha contém cabeçalho, mas nenhuma linha de dados válida foi encontrada abaixo dele.');
-        }
-
-        const stickers = dataRows.map((row, index) => normalizeRow(row, index));
-        await db.stickers.clear();
-        await db.stickers.bulkPut(stickers);
-        await loadFromDb();
-        showImportFeedback(
-          'success',
-          'Importação concluída',
-          `Arquivo <strong>${file.name}</strong> importado com sucesso a partir da aba <strong>${sheetName}</strong>. Foram carregadas <strong>${stickers.length}</strong> figurinhas usando as 6 primeiras colunas da planilha, ignorando o nome do cabeçalho.`
-        );
-      } catch (error) {
-        showImportFeedback(
-          'error',
-          'Falha na importação',
-          `Não foi possível importar o arquivo <strong>${file?.name || ''}</strong>.<br>${escapeHtml(error.message || 'Erro desconhecido durante a leitura da planilha.')}`
-        );
-      } finally {
-        event.target.value = '';
       }
     }
 
@@ -768,19 +737,67 @@
       el.exportOutput.value = prefixText + list;
     }
 
-    function exportWorkbook(rows, fileName) {
-      const exportRows = rows.map(sticker => ({
-        ID: sticker.id,
-        'código da figurinha': sticker.code,
-        país: sticker.country,
-        'Nome da figurinha/jogador': sticker.name,
-        'quantidade que possuo': sticker.quantity,
-        'quantas dessas são repetidas': sticker.duplicates
-      }));
-      const worksheet = XLSX.utils.json_to_sheet(exportRows);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Coleção');
-      XLSX.writeFile(workbook, fileName);
+    async function syncPushToSheets() {
+      if (!SHEETS_ENDPOINT || SHEETS_ENDPOINT.startsWith('COLE_AQUI')) {
+        showFeedback('error', 'Configuração ausente', 'Você precisa configurar a constante SHEETS_ENDPOINT no código com a URL do Apps Script.');
+        return;
+      }
+      try {
+        showFeedback('warning', 'Enviando…', 'Enviando coleção atual para o Google Sheets. Aguarde...');
+        const payload = {
+          stickers: state.stickers.map(s => ({
+            id: s.id,
+            code: s.code,
+            country: s.country,
+            name: s.name,
+            quantity: s.quantity,
+            duplicates: s.duplicates
+          }))
+        };
+        const res = await fetch(SHEETS_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          throw new Error(data.error || 'Erro desconhecido ao salvar no Sheets.');
+        }
+        showFeedback('success', 'Coleção enviada', `Foram enviados ${data.count} registros para o Google Sheets.`);
+      } catch (err) {
+        showFeedback('error', 'Falha ao enviar', escapeHtml(err.message || 'Erro desconhecido ao enviar para o Sheets.'));
+      }
+    }
+
+    async function syncPullFromSheets() {
+      if (!SHEETS_ENDPOINT || SHEETS_ENDPOINT.startsWith('COLE_AQUI')) {
+        showFeedback('error', 'Configuração ausente', 'Você precisa configurar a constante SHEETS_ENDPOINT no código com a URL do Apps Script.');
+        return;
+      }
+      const confirmed = window.confirm('Carregar do Google Sheets vai sobrescrever a coleção local neste dispositivo. Deseja continuar?');
+      if (!confirmed) return;
+
+      try {
+        showFeedback('warning', 'Carregando…', 'Carregando coleção a partir do Google Sheets. Aguarde...');
+        const res = await fetch(SHEETS_ENDPOINT);
+        const data = await res.json();
+        if (!data || !Array.isArray(data.stickers)) {
+          throw new Error('Resposta inesperada do servidor. Esperado { stickers: [...] }.');
+        }
+
+        const normalized = data.stickers
+          .map(normalizeRowFromSheets)
+          .filter(Boolean)
+          .sort((a, b) => a.id - b.id);
+
+        await db.stickers.clear();
+        await db.stickers.bulkPut(normalized);
+        await loadFromDb();
+
+        showFeedback('success', 'Coleção carregada', `Coleção atualizada a partir do Sheets com ${normalized.length} figurinhas.`);
+      } catch (err) {
+        showFeedback('error', 'Falha ao carregar', escapeHtml(err.message || 'Erro desconhecido ao ler do Sheets.'));
+      }
     }
 
     function openQuickAdd() {
