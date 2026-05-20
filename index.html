@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#01696f" />
   <meta name="description" content="Coleção de figurinhas da Copa do Mundo 2026" />
-  <title>Figurinhas Copa 2026 · v3.0</title>
+  <title>Figurinhas Copa 2026 · v3.1</title>
 
   <link rel="manifest" href="./manifest.webmanifest" />
   <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
@@ -14,7 +14,6 @@
   <script src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js"></script>
 
   <style>
-    /* (mesmo CSS da 2.1, sem mudanças estruturais – mantive igual ao que já está funcionando) */
     :root, [data-theme="light"] {
       --color-bg: #f7f6f2;
       --color-surface: #f9f8f5;
@@ -195,7 +194,7 @@
             <path d="M14 20h8M14 26h8M14 32h5" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path>
           </svg>
           <div>
-            <p class="tiny" style="text-transform: uppercase; letter-spacing: .12em;">Copa do Mundo 2026 · versão 3.0</p>
+            <p class="tiny" style="text-transform: uppercase; letter-spacing: .12em;">Copa do Mundo 2026 · versão 3.1</p>
             <h1 class="page-title">Minha coleção de figurinhas</h1>
             <p class="muted">Estado local rápido, com sincronização manual via Google Sheets.</p>
           </div>
@@ -205,16 +204,6 @@
         </div>
       </div>
     </header>
-
-    <section id="importFeedback" class="card surface" style="display:none; padding: 1rem;">
-      <div class="flex items-start gap-3">
-        <div id="feedbackIcon" class="status-chip status-have">Status</div>
-        <div class="grid gap-1">
-          <strong id="feedbackTitle">Situação</strong>
-          <div id="feedbackMessage" class="muted"></div>
-        </div>
-      </div>
-    </section>
 
     <main id="main-content" class="grid gap-4">
       <section class="kpi-grid">
@@ -234,7 +223,7 @@
           <p class="muted">Figurinhas ainda não encontradas.</p>
         </article>
         <article class="card surface">
-          <p class="tiny">Repetidas</p>
+          <p class="tiny">Repetidas (unidades)</p>
           <p id="kpiDuplicates" class="section-title">0</p>
           <p class="muted">Total de unidades repetidas para troca.</p>
         </article>
@@ -276,7 +265,7 @@
               <option value="all">Todas</option>
               <option value="have">Tenho</option>
               <option value="missing">Preciso</option>
-              <option value="duplicates">Duplicadas</option>
+              <option value="duplicates">Repetidas</option>
             </select>
           </div>
         </article>
@@ -292,7 +281,7 @@
             <button class="active" data-status="all">Todas</button>
             <button data-status="have">Tenho</button>
             <button data-status="missing">Preciso</button>
-            <button data-status="duplicates">Duplicadas</button>
+            <button data-status="duplicates">Repetidas</button>
           </div>
         </div>
         <div class="toolbar mb-4">
@@ -358,14 +347,25 @@
             <p class="muted">Use uma aba do Google Sheets como “banco central” da coleção.</p>
           </div>
           <div class="grid gap-3">
-            <button id="syncPush" class="btn btn-secondary w-full"><i data-lucide="upload-cloud"></i><span>Enviar coleção para Sheets</span></button>
+            <button id="syncPush" class="btn btn-secondary w-full"><i data-lucide="upload-cloud"></i><span>Enviar alterações para Sheets</span></button>
             <button id="syncPull" class="btn btn-danger w-full"><i data-lucide="download-cloud"></i><span>Carregar coleção do Sheets</span></button>
           </div>
           <div class="tiny">
-            Enviar substitui o conteúdo da aba no Sheets.
+            Enviar atualiza apenas as quantidades na coluna "Qte".
             Carregar sobrescreve o estado local após a sua confirmação.
           </div>
         </article>
+      </section>
+
+      <!-- Feedback perto dos botões -->
+      <section id="importFeedback" class="card surface" style="display:none; padding: 1rem;">
+        <div class="flex items-start gap-3">
+          <div id="feedbackIcon" class="status-chip status-have">Status</div>
+          <div class="grid gap-1">
+            <strong id="feedbackTitle">Situação</strong>
+            <div id="feedbackMessage" class="muted"></div>
+          </div>
+        </div>
       </section>
     </main>
   </div>
@@ -406,8 +406,9 @@
 
   <script>
     const SHEETS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxDC69XhVOXkVIgNl7z5p-HQG6ClW5gxOrwDyaLBOcArOSFj0Q5P_daO5-HWbIP_Rke/exec';
-    const db = new Dexie('StickerCollectionDB_v3_0');
-    db.version(1).stores({ stickers: 'id, code, country, name, quantity, duplicates, prefix, searchable' });
+
+    const db = new Dexie('StickerCollectionDB_v3_1');
+    db.version(1).stores({ stickers: 'id, code, country, name, quantity, duplicates, prefix, searchable, syncedQuantity' });
 
     const state = {
       stickers: [],
@@ -501,7 +502,8 @@
         quantity,
         duplicates,
         prefix,
-        searchable: `${code} ${country} ${name}`.toLowerCase()
+        searchable: `${code} ${country} ${name}`.toLowerCase(),
+        syncedQuantity: quantity
       };
     }
 
@@ -523,11 +525,11 @@
       const total = state.stickers.length;
       const have = state.stickers.filter(s => s.quantity > 0).length;
       const missing = total - have;
-      const duplicates = state.stickers.reduce((sum, s) => sum + Math.max(s.duplicates, 0), 0);
+      const duplicatesUnits = state.stickers.reduce((sum, s) => sum + Math.max(s.duplicates || 0, 0), 0);
       el.kpiTotal.textContent = total;
       el.kpiHave.textContent = have;
       el.kpiMissing.textContent = missing;
-      el.kpiDuplicates.textContent = duplicates;
+      el.kpiDuplicates.textContent = duplicatesUnits;
       const progress = total ? Math.round((have / total) * 100) : 0;
       el.overallProgressLabel.textContent = `${progress}%`;
       el.overallProgressBar.style.width = `${progress}%`;
@@ -568,7 +570,7 @@
         const statusPass = externalStatus === 'all'
           || (externalStatus === 'have' && sticker.quantity > 0)
           || (externalStatus === 'missing' && sticker.quantity === 0)
-          || (externalStatus === 'duplicates' && sticker.duplicates > 0);
+          || (externalStatus === 'duplicates' && (sticker.duplicates || 0) > 0);
         const queryPass = !query || sticker.searchable.includes(query);
         const countryPass = country === 'all' || sticker.country === country;
         const groupPass = group === 'all' || sticker.prefix === group;
@@ -581,12 +583,22 @@
       const total = state.filtered.length;
       const limit = 20;
 
+      const externalStatus = el.albumFilter.value !== 'all' ? el.albumFilter.value : state.selectedStatus;
+
       let toRender = state.filtered;
       if (total > limit) {
         toRender = state.filtered.slice(0, limit);
-        el.resultsLabel.textContent = `Mostrando ${limit} de ${total} figurinhas (limite da busca).`;
+        if (externalStatus === 'duplicates') {
+          el.resultsLabel.textContent = `Mostrando ${limit} de ${total} figurinhas com repetidas (limite da busca).`;
+        } else {
+          el.resultsLabel.textContent = `Mostrando ${limit} de ${total} figurinhas (limite da busca).`;
+        }
       } else {
-        el.resultsLabel.textContent = `Mostrando ${total} figurinhas.`;
+        if (externalStatus === 'duplicates') {
+          el.resultsLabel.textContent = `Mostrando ${total} figurinhas com repetidas.`;
+        } else {
+          el.resultsLabel.textContent = `Mostrando ${total} figurinhas.`;
+        }
       }
 
       if (!toRender.length) {
@@ -597,9 +609,9 @@
       el.resultsCount.textContent = toRender.length;
 
       el.stickerGrid.innerHTML = toRender.map(sticker => {
-        const statusClass = sticker.duplicates > 0 ? 'duplicate' : sticker.quantity > 0 ? 'have' : '';
-        const statusChip = sticker.duplicates > 0
-          ? '<span class="status-chip status-duplicate">Duplicadas</span>'
+        const statusClass = (sticker.duplicates || 0) > 0 ? 'duplicate' : sticker.quantity > 0 ? 'have' : '';
+        const statusChip = (sticker.duplicates || 0) > 0
+          ? '<span class="status-chip status-duplicate">Repetidas</span>'
           : sticker.quantity > 0
             ? '<span class="status-chip status-have">Tenho</span>'
             : '<span class="status-chip status-missing">Preciso</span>';
@@ -618,7 +630,7 @@
             </div>
             <div class="sticker-meta">
               <span class="status-chip status-have">Qtd ${sticker.quantity}</span>
-              <span class="status-chip ${sticker.duplicates > 0 ? 'status-duplicate' : 'status-missing'}">Rep ${sticker.duplicates}</span>
+              <span class="status-chip ${(sticker.duplicates || 0) > 0 ? 'status-duplicate' : 'status-missing'}">Rep ${sticker.duplicates || 0}</span>
               <span class="status-chip">${escapeHtml(sticker.prefix)}</span>
             </div>
             <div class="grid grid-cols-2 gap-2">
@@ -725,7 +737,7 @@
         filtered = filtered.filter(s => s.quantity === 0);
         prefixText = 'Essa é a lista das figurinhas que preciso: ';
       } else if (type === 'duplicates') {
-        filtered = filtered.filter(s => s.duplicates > 0);
+        filtered = filtered.filter(s => (s.duplicates || 0) > 0);
         prefixText = 'Essa é a lista das figurinhas repetidas: ';
       }
 
@@ -739,21 +751,25 @@
 
     async function syncPushToSheets() {
       if (!SHEETS_ENDPOINT || SHEETS_ENDPOINT.startsWith('COLE_AQUI')) {
-        showFeedback('error', 'Configuração ausente', 'Configure SHEETS_ENDPOINT com a URL do Apps Script.');
+        showFeedback('error', 'Configuração ausente', 'Você precisa configurar a constante SHEETS_ENDPOINT no código com a URL do Apps Script.');
         return;
       }
       try {
-        showFeedback('warning', 'Enviando…', 'Enviando coleção atual para o Google Sheets. Aguarde...');
-        const payload = {
-          stickers: state.stickers.map(s => ({
+        showFeedback('warning', 'Enviando…', 'Enviando alterações de quantidade para o Google Sheets. Aguarde...');
+
+        const updates = state.stickers
+          .filter(s => s.syncedQuantity === undefined || s.quantity !== s.syncedQuantity)
+          .map(s => ({
             id: s.id,
-            code: s.code,
-            country: s.country,
-            name: s.name,
-            quantity: s.quantity,
-            duplicates: s.duplicates
-          }))
-        };
+            quantity: s.quantity
+          }));
+
+        if (!updates.length) {
+          showFeedback('success', 'Nada a enviar', 'Nenhuma quantidade foi alterada desde a última sincronização.');
+          return;
+        }
+
+        const payload = { updates };
         const res = await fetch(SHEETS_ENDPOINT, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
@@ -763,11 +779,19 @@
         if (!data.ok) {
           throw new Error(data.error || 'Erro desconhecido ao salvar no Sheets.');
         }
-        showFeedback('success', 'Coleção enviada', `Foram enviados ${data.count} registros para o Google Sheets.`);
+
+        state.stickers.forEach(s => {
+          if (updates.some(u => u.id === s.id)) {
+            s.syncedQuantity = s.quantity;
+          }
+        });
+        await db.stickers.bulkPut(state.stickers);
+
+        showFeedback('success', 'Sincronização concluída', `Foram atualizadas ${data.updated} quantidades na planilha.`);
       } catch (err) {
         showFeedback('error', 'Falha ao enviar', escapeHtml(err.message || 'Erro desconhecido ao enviar para o Sheets.'));
       }
-}
+    }
 
     async function syncPullFromSheets() {
       if (!SHEETS_ENDPOINT || SHEETS_ENDPOINT.startsWith('COLE_AQUI')) {
@@ -872,10 +896,10 @@
       const count = await db.stickers.count();
       if (count) return;
       const demo = [
-        { id: 1, code: 'FWC1', country: 'Copa', name: 'Emblema oficial', quantity: 1, duplicates: 0, prefix: 'FWC', searchable: 'fwc1 copa emblema oficial' },
-        { id: 2, code: 'ARG10', country: 'Argentina', name: 'Lionel Messi', quantity: 2, duplicates: 1, prefix: 'ARG', searchable: 'arg10 argentina lionel messi' },
-        { id: 3, code: 'BRA7', country: 'Brasil', name: 'Vinicius Júnior', quantity: 0, duplicates: 0, prefix: 'BRA', searchable: 'bra7 brasil vinicius junior' },
-        { id: 4, code: 'CAN13', country: 'Canadá', name: 'Alphonso Davies', quantity: 1, duplicates: 0, prefix: 'CAN', searchable: 'can13 canada alphonso davies' }
+        { id: 1, code: 'FWC1', country: 'Copa', name: 'Emblema oficial', quantity: 1, duplicates: 0, prefix: 'FWC', searchable: 'fwc1 copa emblema oficial', syncedQuantity: 1 },
+        { id: 2, code: 'ARG10', country: 'Argentina', name: 'Lionel Messi', quantity: 2, duplicates: 1, prefix: 'ARG', searchable: 'arg10 argentina lionel messi', syncedQuantity: 2 },
+        { id: 3, code: 'BRA7', country: 'Brasil', name: 'Vinicius Júnior', quantity: 0, duplicates: 0, prefix: 'BRA', searchable: 'bra7 brasil vinicius junior', syncedQuantity: 0 },
+        { id: 4, code: 'CAN13', country: 'Canadá', name: 'Alphonso Davies', quantity: 1, duplicates: 0, prefix: 'CAN', searchable: 'can13 canada alphonso davies', syncedQuantity: 1 }
       ];
       await db.stickers.bulkPut(demo);
     }
