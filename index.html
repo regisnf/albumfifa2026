@@ -288,15 +288,6 @@
             <p class="muted">Adicione uma figurinha por código, país ou nome com busca instantânea.</p>
           </div>
           <button id="openQuickAdd" class="btn btn-primary w-full"><i data-lucide="plus-circle"></i><span>Adicionar figurinha</span></button>
-          <div class="export-box">
-            <label class="tiny" for="albumFilter">Filtro principal</label>
-            <select id="albumFilter" class="select">
-              <option value="all">Todas</option>
-              <option value="have">Tenho</option>
-              <option value="missing">Preciso</option>
-              <option value="duplicates">Duplicadas</option>
-            </select>
-          </div>
         </article>
       </section>
 
@@ -465,7 +456,6 @@
       resultsLabel: document.getElementById('resultsLabel'),
       resetFilters: document.getElementById('resetFilters'),
       exportOutput: document.getElementById('exportOutput'),
-      albumFilter: document.getElementById('albumFilter'),
       quickAddDialog: document.getElementById('quickAddDialog'),
       importFeedback: document.getElementById('importFeedback'),
       feedbackIcon: document.getElementById('feedbackIcon'),
@@ -610,7 +600,7 @@
       const query = el.searchInput.value.trim().toLowerCase();
       const country = el.countryFilter.value;
       const group = el.groupFilter.value;
-      const externalStatus = el.albumFilter.value !== 'all' ? el.albumFilter.value : state.selectedStatus;
+      const externalStatus = state.selectedStatus;
       return state.stickers.filter(sticker => {
         const statusPass = externalStatus === 'all'
           || (externalStatus === 'have' && sticker.quantity > 0)
@@ -628,7 +618,7 @@
       const total = state.filtered.length;
       const limit = 20;
 
-      const externalStatus = el.albumFilter.value !== 'all' ? el.albumFilter.value : state.selectedStatus;
+      const externalStatus = state.selectedStatus;
 
       let toRender = state.filtered;
       if (total > limit) {
@@ -704,7 +694,6 @@
       el.searchInput.addEventListener('input', renderGrid);
       el.countryFilter.addEventListener('change', renderGrid);
       el.groupFilter.addEventListener('change', renderGrid);
-      el.albumFilter.addEventListener('change', renderGrid);
 
       document.getElementById('refreshCountryProgress').addEventListener('click', updateDashboard);
       el.resetFilters.addEventListener('click', () => {
