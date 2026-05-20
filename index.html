@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#01696f" />
   <meta name="description" content="Coleção de figurinhas da Copa do Mundo 2026" />
-  <title>Figurinhas Copa 2026 · v2.0</title>
+  <title>Figurinhas Copa 2026 · v2.1</title>
 
   <link rel="manifest" href="./manifest.webmanifest" />
   <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
@@ -195,15 +195,13 @@
             <path d="M14 20h8M14 26h8M14 32h5" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path>
           </svg>
           <div>
-            <p class="tiny" style="text-transform: uppercase; letter-spacing: .12em;">Copa do Mundo 2026 · versão 2.0</p>
+            <p class="tiny" style="text-transform: uppercase; letter-spacing: .12em;">Copa do Mundo 2026 · versão 2.1</p>
             <h1 class="page-title">Minha coleção de figurinhas</h1>
             <p class="muted">Importe sua planilha, acompanhe progresso, filtre por status e exporte listas de códigos.</p>
           </div>
         </div>
         <div class="flex gap-2 items-center flex-wrap">
           <button class="btn btn-secondary" id="themeToggle" aria-label="Alternar tema"><i data-lucide="moon-star"></i><span>Tema</span></button>
-          <label class="btn btn-primary" for="excelInput"><i data-lucide="file-up"></i><span>Importar Excel</span></label>
-          <input id="excelInput" type="file" accept=".xlsx,.xls" class="sr-only" />
         </div>
       </div>
     </header>
@@ -326,12 +324,29 @@
         <article class="card surface export-box">
           <div>
             <h2 class="section-title">Exportar códigos</h2>
-            <p class="muted">Gere listas simples para uso em trocas ou conferência.</p>
+            <p class="muted">Gere listas textuais prontas para copiar e colar.</p>
           </div>
-          <div class="grid gap-3 md:grid-cols-2">
-            <button id="exportHaveCodes" class="btn btn-secondary"><i data-lucide="download"></i><span>Exportar as que tenho</span></button>
+
+          <div class="grid gap-2">
+            <div class="tiny">Ordenar lista por:</div>
+            <div class="flex items-center gap-3">
+              <label class="flex items-center gap-1 tiny">
+                <input type="radio" name="order" id="orderAlbum" value="album" checked />
+                <span>Álbum (ID)</span>
+              </label>
+              <label class="flex items-center gap-1 tiny">
+                <input type="radio" name="order" id="orderAlpha" value="alpha" />
+                <span>Alfabética (código)</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="grid gap-3 md:grid-cols-3">
+            <button id="exportDuplicatesCodes" class="btn btn-secondary"><i data-lucide="download"></i><span>Exportar repetidas</span></button>
             <button id="exportMissingCodes" class="btn btn-secondary"><i data-lucide="download"></i><span>Exportar as que preciso</span></button>
+            <button id="exportHaveCodes" class="btn btn-secondary"><i data-lucide="download"></i><span>Exportar as que tenho</span></button>
           </div>
+
           <label class="tiny" for="exportOutput">Saída</label>
           <textarea id="exportOutput" class="export-area" readonly placeholder="A lista exportada aparecerá aqui."></textarea>
           <button id="copyExport" class="btn btn-primary"><i data-lucide="copy"></i><span>Copiar lista</span></button>
@@ -340,13 +355,14 @@
         <article class="card surface export-box">
           <div>
             <h2 class="section-title">Backup em Excel</h2>
-            <p class="muted">Exporte a base completa atualizada ou apenas as repetidas para troca.</p>
+            <p class="muted">Importe ou exporte sua planilha completa.</p>
           </div>
-          <div class="grid gap-3 md:grid-cols-2">
-            <button id="exportWorkbook" class="btn btn-secondary"><i data-lucide="sheet"></i><span>Exportar planilha completa</span></button>
-            <button id="exportDuplicatesWorkbook" class="btn btn-secondary"><i data-lucide="repeat"></i><span>Exportar repetidas</span></button>
+          <div class="grid gap-3">
+            <label class="btn btn-secondary w-full" for="excelInput"><i data-lucide="file-up"></i><span>Importar Excel</span></label>
+            <input id="excelInput" type="file" accept=".xlsx,.xls" class="sr-only" />
+            <button id="exportWorkbook" class="btn btn-secondary w-full"><i data-lucide="sheet"></i><span>Exportar planilha completa</span></button>
           </div>
-          <div class="tiny">A exportação preserva as colunas ID, código, país, nome, quantidade e repetidas.</div>
+          <div class="tiny">Formato esperado de colunas: ID, código, país, nome, quantidade, repetidas (nome do cabeçalho não importa).</div>
         </article>
       </section>
     </main>
@@ -387,7 +403,7 @@
   </div>
 
   <script>
-    const db = new Dexie('StickerCollectionDB_v2');
+    const db = new Dexie('StickerCollectionDB_v2_1');
     db.version(1).stores({ stickers: 'id, code, country, name, quantity, duplicates, prefix, searchable' });
 
     const state = {
@@ -395,11 +411,11 @@
       filtered: [],
       selectedStatus: 'all',
       quickAddSelection: null,
-      currentTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+      currentTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+      exportOrder: 'album'
     };
 
     const el = {
-      excelInput: document.getElementById('excelInput'),
       kpiTotal: document.getElementById('kpiTotal'),
       kpiHave: document.getElementById('kpiHave'),
       kpiMissing: document.getElementById('kpiMissing'),
@@ -431,7 +447,8 @@
       previewCount: document.getElementById('previewCount'),
       previewDuplicates: document.getElementById('previewDuplicates'),
       confirmQuickAdd: document.getElementById('confirmQuickAdd'),
-      themeToggle: document.getElementById('themeToggle')
+      themeToggle: document.getElementById('themeToggle'),
+      excelInput: document.getElementById('excelInput')
     };
 
     function setTheme(theme) {
@@ -612,13 +629,12 @@
     }
 
     function bindEvents() {
-      el.excelInput.addEventListener('change', importExcelFile);
       el.searchInput.addEventListener('input', renderGrid);
       el.countryFilter.addEventListener('change', renderGrid);
       el.groupFilter.addEventListener('change', renderGrid);
       el.albumFilter.addEventListener('change', renderGrid);
       document.getElementById('refreshCountryProgress').addEventListener('click', updateDashboard);
-      document.getElementById('resetFilters').addEventListener('click', () => {
+      el.resetFilters.addEventListener('click', () => {
         el.searchInput.value = '';
         el.countryFilter.value = 'all';
         el.groupFilter.value = 'all';
@@ -640,14 +656,20 @@
         if (plus) adjustQuantity(plus.dataset.id, 1);
         if (minus) adjustQuantity(minus.dataset.id, -1);
       });
-      document.getElementById('exportHaveCodes').addEventListener('click', () => exportCodeList('have'));
+
+      document.getElementById('exportDuplicatesCodes').addEventListener('click', () => exportCodeList('duplicates'));
       document.getElementById('exportMissingCodes').addEventListener('click', () => exportCodeList('missing'));
+      document.getElementById('exportHaveCodes').addEventListener('click', () => exportCodeList('have'));
       document.getElementById('copyExport').addEventListener('click', async () => {
         if (!el.exportOutput.value) return;
         await navigator.clipboard.writeText(el.exportOutput.value);
       });
+
       document.getElementById('exportWorkbook').addEventListener('click', () => exportWorkbook(state.stickers, 'colecao-copa-2026.xlsx'));
-      document.getElementById('exportDuplicatesWorkbook').addEventListener('click', () => exportWorkbook(state.stickers.filter(s => s.duplicates > 0), 'repetidas-copa-2026.xlsx'));
+
+      document.getElementById('orderAlbum').addEventListener('change', () => { state.exportOrder = 'album'; });
+      document.getElementById('orderAlpha').addEventListener('change', () => { state.exportOrder = 'alpha'; });
+
       document.getElementById('openQuickAdd').addEventListener('click', openQuickAdd);
       document.getElementById('closeQuickAdd').addEventListener('click', closeQuickAdd);
       document.getElementById('quickAddCancel').addEventListener('click', closeQuickAdd);
@@ -663,10 +685,14 @@
         await adjustQuantity(state.quickAddSelection.id, 1);
         closeQuickAdd();
       });
+
       el.themeToggle.addEventListener('click', () => setTheme(state.currentTheme === 'dark' ? 'light' : 'dark'));
       document.addEventListener('keydown', event => {
         if (event.key === 'Escape') closeQuickAdd();
       });
+
+      el.excelInput.addEventListener('change', importExcelFile);
+
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./service-worker.js').catch(() => {});
       }
@@ -693,7 +719,7 @@
         const dataRows = rows.slice(1).filter(row => Array.isArray(row) && row.some(cell => String(cell).trim() !== ''));
 
         if (header.length < 6) {
-          throw new Error('O cabeçalho encontrado tem menos de 6 colunas. O importador versão 2.0 espera as 6 primeiras colunas nesta ordem: ID, código, país, nome, quantidade e repetidas. Os nomes podem ser quaisquer, mas a posição das colunas precisa seguir essa ordem.');
+          throw new Error('O cabeçalho encontrado tem menos de 6 colunas. O importador versão 2.1 espera as 6 primeiras colunas nesta ordem: ID, código, país, nome, quantidade e repetidas. Os nomes podem ser quaisquer, mas a posição das colunas precisa seguir essa ordem.');
         }
         if (!dataRows.length) {
           throw new Error('A planilha contém cabeçalho, mas nenhuma linha de dados válida foi encontrada abaixo dele.');
@@ -720,11 +746,26 @@
     }
 
     function exportCodeList(type) {
-      const list = state.stickers
-        .filter(sticker => type === 'have' ? sticker.quantity > 0 : sticker.quantity === 0)
-        .map(sticker => sticker.code)
-        .join(', ');
-      el.exportOutput.value = list;
+      let filtered = state.stickers;
+      let prefixText = '';
+
+      if (type === 'have') {
+        filtered = filtered.filter(s => s.quantity > 0);
+        prefixText = 'Essa é a lista das figurinhas que tenho: ';
+      } else if (type === 'missing') {
+        filtered = filtered.filter(s => s.quantity === 0);
+        prefixText = 'Essa é a lista das figurinhas que preciso: ';
+      } else if (type === 'duplicates') {
+        filtered = filtered.filter(s => s.duplicates > 0);
+        prefixText = 'Essa é a lista das figurinhas repetidas: ';
+      }
+
+      if (state.exportOrder === 'alpha') {
+        filtered = [...filtered].sort((a, b) => a.code.localeCompare(b.code));
+      }
+
+      const list = filtered.map(s => s.code).join(', ');
+      el.exportOutput.value = prefixText + list;
     }
 
     function exportWorkbook(rows, fileName) {
