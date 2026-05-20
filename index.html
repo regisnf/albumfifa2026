@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#01696f" />
   <meta name="description" content="Coleção de figurinhas da Copa do Mundo 2026" />
-  <title>Figurinhas Copa 2026 · v3.1</title>
+  <title>Figurinhas Copa 2026 · v3.2</title>
 
   <link rel="manifest" href="./manifest.webmanifest" />
   <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
@@ -120,6 +120,10 @@
     .status-have { background: color-mix(in srgb, var(--color-success) 14%, transparent); color: var(--color-success); }
     .status-missing { background: color-mix(in srgb, var(--color-warning) 18%, transparent); color: color-mix(in srgb, var(--color-warning) 84%, var(--color-text)); }
     .status-duplicate { background: color-mix(in srgb, var(--color-error) 14%, transparent); color: var(--color-error); }
+    .status-warning {
+      background: color-mix(in srgb, var(--color-warning) 18%, transparent);
+      color: color-mix(in srgb, var(--color-warning) 84%, var(--color-text));
+    }
     .toolbar { display: grid; gap: .85rem; }
     .sticker-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: .8rem; }
     .sticker-card {
@@ -168,6 +172,25 @@
     }
     .empty-state { padding: 2rem 1rem; text-align: center; color: var(--color-text-muted); }
     .sr-only { position:absolute; width:1px; height:1px; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); }
+    .sync-indicator {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(40,37,29,.16);
+      background: var(--color-surface-2);
+    }
+    .sync-indicator.clean {
+      border-color: color-mix(in srgb, var(--color-success) 40%, transparent);
+      color: var(--color-success);
+    }
+    .sync-indicator.dirty {
+      border-color: color-mix(in srgb, var(--color-warning) 40%, transparent);
+      color: var(--color-warning);
+      background: color-mix(in srgb, var(--color-warning) 12%, var(--color-surface-2));
+    }
     @media (min-width: 768px) {
       .app-shell { padding: 1.5rem; }
       .kpi-grid { grid-template-columns: repeat(4, minmax(0,1fr)); }
@@ -194,12 +217,18 @@
             <path d="M14 20h8M14 26h8M14 32h5" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path>
           </svg>
           <div>
-            <p class="tiny" style="text-transform: uppercase; letter-spacing: .12em;">Copa do Mundo 2026 · versão 3.1</p>
+            <p class="tiny" style="text-transform: uppercase; letter-spacing: .12em;">Copa do Mundo 2026 · versão 3.2</p>
             <h1 class="page-title">Minha coleção de figurinhas</h1>
             <p class="muted">Estado local rápido, com sincronização manual via Google Sheets.</p>
           </div>
         </div>
         <div class="flex gap-2 items-center flex-wrap">
+          <div class="sync-indicator clean" id="syncIndicatorClean" title="Coleção sincronizada com o Google Sheets" style="display:none;">
+            <i data-lucide="circle-check-big"></i>
+          </div>
+          <div class="sync-indicator dirty" id="syncIndicatorDirty" title="Há alterações locais não enviadas" style="display:none;">
+            <i data-lucide="circle-alert"></i>
+          </div>
           <button class="btn btn-secondary" id="themeToggle" aria-label="Alternar tema"><i data-lucide="moon-star"></i><span>Tema</span></button>
         </div>
       </div>
@@ -357,7 +386,6 @@
         </article>
       </section>
 
-      <!-- Feedback perto dos botões -->
       <section id="importFeedback" class="card surface" style="display:none; padding: 1rem;">
         <div class="flex items-start gap-3">
           <div id="feedbackIcon" class="status-chip status-have">Status</div>
@@ -405,9 +433,9 @@
   </div>
 
   <script>
-    const SHEETS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxDC69XhVOXkVIgNl7z5p-HQG6ClW5gxOrwDyaLBOcArOSFj0Q5P_daO5-HWbIP_Rke/exec';
+    const SHEETS_ENDPOINT = 'COLE_AQUI_A_URL_DO_SEU_APPS_SCRIPT';
 
-    const db = new Dexie('StickerCollectionDB_v3_1');
+    const db = new Dexie('StickerCollectionDB_v3_2');
     db.version(1).stores({ stickers: 'id, code, country, name, quantity, duplicates, prefix, searchable, syncedQuantity' });
 
     const state = {
@@ -458,7 +486,9 @@
       exportDuplicatesCodes: document.getElementById('exportDuplicatesCodes'),
       exportMissingCodes: document.getElementById('exportMissingCodes'),
       exportHaveCodes: document.getElementById('exportHaveCodes'),
-      copyExport: document.getElementById('copyExport')
+      copyExport: document.getElementById('copyExport'),
+      syncIndicatorClean: document.getElementById('syncIndicatorClean'),
+      syncIndicatorDirty: document.getElementById('syncIndicatorDirty')
     };
 
     function setTheme(theme) {
@@ -474,7 +504,7 @@
       const styles = {
         success: { chip: 'status-chip status-have', label: 'Sucesso' },
         error: { chip: 'status-chip status-duplicate', label: 'Erro' },
-        warning: { chip: 'status-chip status-missing', label: 'Aviso' }
+        warning: { chip: 'status-chip status-warning', label: 'Aviso' }
       };
       const current = styles[type] || styles.warning;
       el.importFeedback.style.display = 'block';
@@ -482,6 +512,20 @@
       el.feedbackIcon.textContent = current.label;
       el.feedbackTitle.textContent = title;
       el.feedbackMessage.innerHTML = message;
+    }
+
+    function updateSyncIndicator() {
+      const hasDirty = state.stickers.some(
+        s => s.syncedQuantity === undefined || s.quantity !== s.syncedQuantity
+      );
+      if (hasDirty) {
+        el.syncIndicatorDirty.style.display = 'inline-flex';
+        el.syncIndicatorClean.style.display = 'none';
+      } else {
+        el.syncIndicatorDirty.style.display = 'none';
+        el.syncIndicatorClean.style.display = 'inline-flex';
+      }
+      lucide.createIcons();
     }
 
     function normalizeRowFromSheets(s) {
@@ -512,6 +556,7 @@
       hydrateFilters();
       updateDashboard();
       renderGrid();
+      updateSyncIndicator();
     }
 
     function hydrateFilters() {
@@ -651,6 +696,7 @@
       await db.stickers.put(sticker);
       updateDashboard();
       renderGrid();
+      updateSyncIndicator();
       if (state.quickAddSelection?.id === sticker.id) showQuickAddPreview(sticker);
     }
 
@@ -710,7 +756,15 @@
       el.confirmQuickAdd.addEventListener('click', async () => {
         if (!state.quickAddSelection) return;
         await adjustQuantity(state.quickAddSelection.id, 1);
-        closeQuickAdd();
+
+          // Prepara para um novo input, mantendo o diálogo aberto.
+          state.quickAddSelection = null;
+          el.quickAddInput.value = '';
+          el.quickAddDropdown.innerHTML = '';
+          el.quickAddDropdown.classList.remove('open');
+          el.quickAddPreview.style.display = 'none';
+          el.confirmQuickAdd.disabled = true;
+          el.quickAddInput.focus();
       });
 
       el.themeToggle.addEventListener('click', () => setTheme(state.currentTheme === 'dark' ? 'light' : 'dark'));
@@ -786,6 +840,7 @@
           }
         });
         await db.stickers.bulkPut(state.stickers);
+        updateSyncIndicator();
 
         showFeedback('success', 'Sincronização concluída', `Foram atualizadas ${data.updated} quantidades na planilha.`);
       } catch (err) {
@@ -817,6 +872,7 @@
         await db.stickers.clear();
         await db.stickers.bulkPut(normalized);
         await loadFromDb();
+        updateSyncIndicator();
 
         showFeedback('success', 'Coleção carregada', `Coleção atualizada a partir do Sheets com ${normalized.length} figurinhas.`);
       } catch (err) {
