@@ -754,11 +754,9 @@
             duplicates: s.duplicates
           }))
         };
-        const res = await fetch(SHEETS_ENDPOINT, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
+        const encoded = encodeURIComponent(JSON.stringify(payload));
+        const url = `${SHEETS_ENDPOINT}?mode=save&payload=${encoded}`;
+        const res = await fetch(url); // GET em vez de POST
         const data = await res.json();
         if (!data.ok) {
           throw new Error(data.error || 'Erro desconhecido ao salvar no Sheets.');
