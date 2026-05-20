@@ -739,7 +739,7 @@
 
     async function syncPushToSheets() {
       if (!SHEETS_ENDPOINT || SHEETS_ENDPOINT.startsWith('COLE_AQUI')) {
-        showFeedback('error', 'Configuração ausente', 'Você precisa configurar a constante SHEETS_ENDPOINT no código com a URL do Apps Script.');
+        showFeedback('error', 'Configuração ausente', 'Configure SHEETS_ENDPOINT com a URL do Apps Script.');
         return;
       }
       try {
@@ -754,9 +754,11 @@
             duplicates: s.duplicates
           }))
         };
-        const encoded = encodeURIComponent(JSON.stringify(payload));
-        const url = `${SHEETS_ENDPOINT}?mode=save&payload=${encoded}`;
-        const res = await fetch(url); // GET em vez de POST
+        const res = await fetch(SHEETS_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
+        });
         const data = await res.json();
         if (!data.ok) {
           throw new Error(data.error || 'Erro desconhecido ao salvar no Sheets.');
@@ -765,7 +767,7 @@
       } catch (err) {
         showFeedback('error', 'Falha ao enviar', escapeHtml(err.message || 'Erro desconhecido ao enviar para o Sheets.'));
       }
-    }
+}
 
     async function syncPullFromSheets() {
       if (!SHEETS_ENDPOINT || SHEETS_ENDPOINT.startsWith('COLE_AQUI')) {
