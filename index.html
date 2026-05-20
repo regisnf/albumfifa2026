@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#01696f" />
+  <meta name="description" content="Coleção de figurinhas da Copa do Mundo 2026" />
+  <title>Figurinhas Copa 2026 · v2.0</title>
+
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js"></script>
+
+  <style>
+    :root, [data-theme="light"] {
+      --color-bg: #f7f6f2;
+      --color-surface: #f9f8f5;
+      --color-surface-2: #fbfbf9;
+      --color-surface-offset: #f3f0ec;
+      --color-border: #d4d1ca;
+      --color-text: #28251d;
+      --color-text-muted: #7a7974;
+      --color-text-faint: #bab9b4;
+      --color-text-inverse: #f9f8f4;
+      --color-primary: #01696f;
+      --color-primary-hover: #0c4e54;
+      --color-primary-highlight: #cedcd8;
+      --color-success: #437a22;
+      --color-warning: #d19900;
+      --color-error: #a12c7b;
+      --shadow-sm: 0 1px 2px rgba(40, 37, 29, 0.06);
+      --shadow-md: 0 4px 12px rgba(40, 37, 29, 0.08);
+      --shadow-lg: 0 12px 32px rgba(40, 37, 29, 0.12);
+      --radius-sm: 0.375rem;
+      --radius-md: 0.5rem;
+      --radius-lg: 0.75rem;
+      --radius-xl: 1rem;
+      --space-1: 0.25rem;
+      --space-2: 0.5rem;
+      --space-3: 0.75rem;
+      --space-4: 1rem;
+      --space-5: 1.25rem;
+      --space-6: 1.5rem;
+      --space-8: 2rem;
+      --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+      --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+      --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+      --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+      --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+      --transition: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+      --font-body: 'Satoshi', 'Inter', sans-serif;
+    }
+    [data-theme="dark"] {
+      --color-bg: #171614;
+      --color-surface: #1c1b19;
+      --color-surface-2: #201f1d;
+      --color-surface-offset: #1d1c1a;
+      --color-border: #393836;
+      --color-text: #cdccca;
+      --color-text-muted: #979693;
+      --color-text-faint: #6c6b68;
+      --color-text-inverse: #2b2a28;
+      --color-primary: #4f98a3;
+      --color-primary-hover: #227f8b;
+      --color-primary-highlight: #313b3b;
+      --color-success: #6daa45;
+      --color-warning: #e8af34;
+      --color-error: #d163a7;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+      --shadow-lg: 0 12px 32px rgba(0,0,0,0.4);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: none; text-size-adjust: none; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      font-family: var(--font-body);
+      font-size: var(--text-base);
+      color: var(--color-text);
+      background: var(--color-bg);
+      line-height: 1.5;
+    }
+    button, input, select { font: inherit; }
+    .app-shell { max-width: 1120px; margin: 0 auto; padding: var(--space-4); }
+    .surface { background: var(--color-surface); border: 1px solid rgba(40,37,29,.12); box-shadow: var(--shadow-sm); }
+    [data-theme="dark"] .surface { border-color: rgba(255,255,255,.1); }
+    .card { border-radius: var(--radius-xl); padding: var(--space-4); }
+    .header-card { position: sticky; top: 0; z-index: 20; backdrop-filter: blur(14px); background: color-mix(in srgb, var(--color-bg) 86%, transparent); }
+    .logo-mark { width: 36px; height: 36px; color: var(--color-primary); }
+    .btn {
+      min-height: 44px; border-radius: 999px; border: 1px solid transparent; padding: 0.72rem 1rem;
+      display: inline-flex; align-items: center; justify-content: center; gap: .55rem; cursor: pointer;
+      transition: all var(--transition); font-size: var(--text-sm); font-weight: 600;
+    }
+    .btn:active { transform: translateY(1px) scale(.99); }
+    .btn-primary { background: var(--color-primary); color: var(--color-text-inverse); }
+    .btn-primary:hover { background: var(--color-primary-hover); }
+    .btn-secondary { background: var(--color-surface-2); color: var(--color-text); border-color: rgba(40,37,29,.1); }
+    [data-theme="dark"] .btn-secondary { border-color: rgba(255,255,255,.1); }
+    .btn-danger { background: color-mix(in srgb, var(--color-error) 14%, var(--color-surface)); color: var(--color-error); border-color: color-mix(in srgb, var(--color-error) 24%, transparent); }
+    .input, .select {
+      width: 100%; min-height: 48px; padding: .85rem 1rem; border-radius: var(--radius-lg);
+      border: 1px solid rgba(40,37,29,.12); background: var(--color-surface-2); color: var(--color-text);
+      transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+    }
+    [data-theme="dark"] .input, [data-theme="dark"] .select { border-color: rgba(255,255,255,.1); }
+    .input:focus, .select:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent); }
+    .muted { color: var(--color-text-muted); }
+    .tiny { font-size: var(--text-xs); color: var(--color-text-muted); }
+    .section-title { font-size: var(--text-lg); font-weight: 700; letter-spacing: -.02em; }
+    .page-title { font-size: var(--text-xl); font-weight: 700; letter-spacing: -.03em; }
+    .kpi-grid, .actions-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 1rem; }
+    .status-chip {
+      display: inline-flex; align-items: center; gap: .35rem; border-radius: 999px; padding: .32rem .7rem;
+      font-size: var(--text-xs); font-weight: 700;
+    }
+    .status-have { background: color-mix(in srgb, var(--color-success) 14%, transparent); color: var(--color-success); }
+    .status-missing { background: color-mix(in srgb, var(--color-warning) 18%, transparent); color: color-mix(in srgb, var(--color-warning) 84%, var(--color-text)); }
+    .status-duplicate { background: color-mix(in srgb, var(--color-error) 14%, transparent); color: var(--color-error); }
+    .toolbar { display: grid; gap: .85rem; }
+    .sticker-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: .8rem; }
+    .sticker-card {
+      border-radius: var(--radius-xl); padding: 1rem; background: var(--color-surface-2); border: 1px solid rgba(40,37,29,.1);
+      display: grid; gap: .55rem; transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+    }
+    [data-theme="dark"] .sticker-card { border-color: rgba(255,255,255,.08); }
+    .sticker-card:active { transform: scale(.99); }
+    .sticker-card.have { border-color: color-mix(in srgb, var(--color-success) 30%, transparent); }
+    .sticker-card.duplicate { border-color: color-mix(in srgb, var(--color-error) 30%, transparent); }
+    .sticker-meta { display: flex; flex-wrap: wrap; gap: .4rem; }
+    .sticker-code { font-weight: 800; letter-spacing: .04em; }
+    .list-scroll { max-height: 56dvh; overflow: auto; padding-right: .25rem; }
+    .dialog-backdrop {
+      position: fixed; inset: 0; background: rgba(17,17,17,.38); display: none; align-items: end; justify-content: center; z-index: 40;
+    }
+    .dialog-backdrop.open { display: flex; }
+    .dialog {
+      width: min(100%, 720px); background: var(--color-bg); border-radius: 1.4rem 1.4rem 0 0; padding: 1.25rem;
+      border: 1px solid rgba(40,37,29,.1); box-shadow: var(--shadow-lg);
+    }
+    .autocomplete { position: relative; }
+    .dropdown {
+      position: absolute; top: calc(100% + .35rem); left: 0; right: 0; background: var(--color-surface);
+      border: 1px solid rgba(40,37,29,.12); border-radius: 1rem; box-shadow: var(--shadow-lg); overflow: hidden; z-index: 30;
+      max-height: 280px; overflow-y: auto; display: none;
+    }
+    .dropdown.open { display: block; }
+    .dropdown-item {
+      width: 100%; text-align: left; padding: .85rem 1rem; background: transparent; border: 0; border-bottom: 1px solid rgba(40,37,29,.06);
+      display: grid; gap: .18rem;
+    }
+    [data-theme="dark"] .dropdown, [data-theme="dark"] .dialog { border-color: rgba(255,255,255,.08); }
+    [data-theme="dark"] .dropdown-item { border-bottom-color: rgba(255,255,255,.06); }
+    .dropdown-item:last-child { border-bottom: 0; }
+    .dropdown-item:hover, .dropdown-item.active { background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface)); }
+    .progress-bar { width: 100%; height: 10px; background: var(--color-surface-offset); border-radius: 999px; overflow: hidden; }
+    .progress-bar > span { display: block; height: 100%; background: linear-gradient(90deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 70%, white)); border-radius: 999px; }
+    .pill-toggle { display: inline-flex; padding: .24rem; background: var(--color-surface-offset); border-radius: 999px; gap: .24rem; flex-wrap: wrap; }
+    .pill-toggle button { min-height: 40px; padding: .55rem .8rem; border-radius: 999px; color: var(--color-text-muted); }
+    .pill-toggle button.active { background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-sm); }
+    .export-box { display: grid; gap: .65rem; }
+    textarea.export-area {
+      width: 100%; min-height: 116px; border-radius: var(--radius-lg); border: 1px solid rgba(40,37,29,.12);
+      background: var(--color-surface-2); color: var(--color-text); padding: 1rem; resize: vertical;
+    }
+    .empty-state { padding: 2rem 1rem; text-align: center; color: var(--color-text-muted); }
+    .sr-only { position:absolute; width:1px; height:1px; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); }
+    @media (min-width: 768px) {
+      .app-shell { padding: 1.5rem; }
+      .kpi-grid { grid-template-columns: repeat(4, minmax(0,1fr)); }
+      .actions-grid { grid-template-columns: 1.25fr .95fr; }
+      .toolbar { grid-template-columns: 1.4fr .9fr .9fr; align-items: end; }
+      .sticker-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+      .dialog-backdrop { align-items: center; }
+      .dialog { border-radius: 1.4rem; }
+    }
+    @media (min-width: 1024px) {
+      .sticker-grid { grid-template-columns: repeat(4, minmax(0,1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <a href="#main-content" class="sr-only">Pular para o conteúdo</a>
+  <div class="app-shell">
+    <header class="header-card card surface mb-4">
+      <div class="flex items-start justify-between gap-4 flex-wrap">
+        <div class="flex items-start gap-3">
+          <svg class="logo-mark" viewBox="0 0 48 48" fill="none" aria-label="Logo do álbum">
+            <rect x="6" y="8" width="24" height="32" rx="7" stroke="currentColor" stroke-width="3"></rect>
+            <path d="M18 16h14a6 6 0 0 1 6 6v18" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path>
+            <path d="M14 20h8M14 26h8M14 32h5" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path>
+          </svg>
+          <div>
+            <p class="tiny" style="text-transform: uppercase; letter-spacing: .12em;">Copa do Mundo 2026 · versão 2.0</p>
+            <h1 class="page-title">Minha coleção de figurinhas</h1>
+            <p class="muted">Importe sua planilha, acompanhe progresso, filtre por status e exporte listas de códigos.</p>
+          </div>
+        </div>
+        <div class="flex gap-2 items-center flex-wrap">
+          <button class="btn btn-secondary" id="themeToggle" aria-label="Alternar tema"><i data-lucide="moon-star"></i><span>Tema</span></button>
+          <label class="btn btn-primary" for="excelInput"><i data-lucide="file-up"></i><span>Importar Excel</span></label>
+          <input id="excelInput" type="file" accept=".xlsx,.xls" class="sr-only" />
+        </div>
+      </div>
+    </header>
+
+    <section id="importFeedback" class="card surface" style="display:none; padding: 1rem;">
+      <div class="flex items-start gap-3">
+        <div id="feedbackIcon" class="status-chip status-have">Status</div>
+        <div class="grid gap-1">
+          <strong id="feedbackTitle">Importação</strong>
+          <div id="feedbackMessage" class="muted"></div>
+        </div>
+      </div>
+    </section>
+
+    <main id="main-content" class="grid gap-4">
+      <section class="kpi-grid">
+        <article class="card surface">
+          <p class="tiny">Total no álbum</p>
+          <p id="kpiTotal" class="section-title">0</p>
+          <p class="muted">Quantidade total de figurinhas cadastradas.</p>
+        </article>
+        <article class="card surface">
+          <p class="tiny">Tenho</p>
+          <p id="kpiHave" class="section-title">0</p>
+          <p class="muted">Figurinhas com quantidade maior que zero.</p>
+        </article>
+        <article class="card surface">
+          <p class="tiny">Faltam</p>
+          <p id="kpiMissing" class="section-title">0</p>
+          <p class="muted">Figurinhas ainda não encontradas.</p>
+        </article>
+        <article class="card surface">
+          <p class="tiny">Repetidas</p>
+          <p id="kpiDuplicates" class="section-title">0</p>
+          <p class="muted">Total de unidades repetidas para troca.</p>
+        </article>
+      </section>
+
+      <section class="actions-grid">
+        <article class="card surface">
+          <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
+            <div>
+              <h2 class="section-title">Progresso do álbum</h2>
+              <p class="muted">Visualize a conclusão geral e por país.</p>
+            </div>
+            <button id="refreshCountryProgress" class="btn btn-secondary"><i data-lucide="refresh-cw"></i><span>Atualizar</span></button>
+          </div>
+          <div class="grid gap-4">
+            <div>
+              <div class="flex justify-between gap-3 mb-2"><span>Geral</span><strong id="overallProgressLabel">0%</strong></div>
+              <div class="progress-bar"><span id="overallProgressBar" style="width:0%"></span></div>
+            </div>
+            <div>
+              <div class="flex items-center justify-between gap-3 mb-2">
+                <span>Por país</span>
+                <span class="tiny" id="countryProgressCount">0 países</span>
+              </div>
+              <div id="countryProgressList" class="grid gap-3 list-scroll"></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card surface grid gap-4">
+          <div>
+            <h2 class="section-title">Ação rápida</h2>
+            <p class="muted">Adicione uma figurinha por código, país ou nome com busca instantânea.</p>
+          </div>
+          <button id="openQuickAdd" class="btn btn-primary w-full"><i data-lucide="plus-circle"></i><span>Adicionar figurinha</span></button>
+          <div class="export-box">
+            <label class="tiny" for="albumFilter">Filtro principal</label>
+            <select id="albumFilter" class="select">
+              <option value="all">Todas</option>
+              <option value="have">Tenho</option>
+              <option value="missing">Preciso</option>
+              <option value="duplicates">Duplicadas</option>
+            </select>
+          </div>
+        </article>
+      </section>
+
+      <section class="card surface">
+        <div class="flex items-start justify-between gap-4 flex-wrap mb-4">
+          <div>
+            <h2 class="section-title">Busca e visualização</h2>
+            <p class="muted">Pesquise em tempo real e combine filtros por status, país e grupo.</p>
+          </div>
+          <div class="pill-toggle" id="statusToggle">
+            <button class="active" data-status="all">Todas</button>
+            <button data-status="have">Tenho</button>
+            <button data-status="missing">Preciso</button>
+            <button data-status="duplicates">Duplicadas</button>
+          </div>
+        </div>
+        <div class="toolbar mb-4">
+          <div>
+            <label class="tiny" for="searchInput">Buscar</label>
+            <input id="searchInput" class="input" type="search" placeholder="Código, país ou nome" autocomplete="off" />
+          </div>
+          <div>
+            <label class="tiny" for="countryFilter">País</label>
+            <select id="countryFilter" class="select">
+              <option value="all">Todos os países</option>
+            </select>
+          </div>
+          <div>
+            <label class="tiny" for="groupFilter">Grupo/prefixo</label>
+            <select id="groupFilter" class="select">
+              <option value="all">Todos os prefixos</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
+          <p class="muted"><span id="resultsCount">0</span> figurinhas mostradas.</p>
+          <button id="resetFilters" class="btn btn-secondary"><i data-lucide="rotate-ccw"></i><span>Limpar filtros</span></button>
+        </div>
+        <div id="stickerGrid" class="sticker-grid"></div>
+      </section>
+
+      <section class="grid gap-4 md:grid-cols-2">
+        <article class="card surface export-box">
+          <div>
+            <h2 class="section-title">Exportar códigos</h2>
+            <p class="muted">Gere listas simples para uso em trocas ou conferência.</p>
+          </div>
+          <div class="grid gap-3 md:grid-cols-2">
+            <button id="exportHaveCodes" class="btn btn-secondary"><i data-lucide="download"></i><span>Exportar as que tenho</span></button>
+            <button id="exportMissingCodes" class="btn btn-secondary"><i data-lucide="download"></i><span>Exportar as que preciso</span></button>
+          </div>
+          <label class="tiny" for="exportOutput">Saída</label>
+          <textarea id="exportOutput" class="export-area" readonly placeholder="A lista exportada aparecerá aqui."></textarea>
+          <button id="copyExport" class="btn btn-primary"><i data-lucide="copy"></i><span>Copiar lista</span></button>
+        </article>
+
+        <article class="card surface export-box">
+          <div>
+            <h2 class="section-title">Backup em Excel</h2>
+            <p class="muted">Exporte a base completa atualizada ou apenas as repetidas para troca.</p>
+          </div>
+          <div class="grid gap-3 md:grid-cols-2">
+            <button id="exportWorkbook" class="btn btn-secondary"><i data-lucide="sheet"></i><span>Exportar planilha completa</span></button>
+            <button id="exportDuplicatesWorkbook" class="btn btn-secondary"><i data-lucide="repeat"></i><span>Exportar repetidas</span></button>
+          </div>
+          <div class="tiny">A exportação preserva as colunas ID, código, país, nome, quantidade e repetidas.</div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <div class="dialog-backdrop" id="quickAddDialog" aria-hidden="true">
+    <div class="dialog">
+      <div class="flex items-start justify-between gap-4 mb-4">
+        <div>
+          <p class="tiny">Ação rápida</p>
+          <h2 class="section-title">Adicionar figurinha</h2>
+        </div>
+        <button id="closeQuickAdd" class="btn btn-secondary" aria-label="Fechar diálogo"><i data-lucide="x"></i></button>
+      </div>
+      <div class="grid gap-4">
+        <div class="autocomplete">
+          <label class="tiny" for="quickAddInput">Buscar por código, país ou nome</label>
+          <input id="quickAddInput" class="input" type="search" autocomplete="off" placeholder="Ex.: FWC1, Argentina, Messi" />
+          <div id="quickAddDropdown" class="dropdown" role="listbox" aria-label="Resultados"></div>
+        </div>
+        <div id="quickAddPreview" class="card" style="background: var(--color-surface); border:1px solid rgba(40,37,29,.08); display:none; padding:1rem;">
+          <div class="flex items-start justify-between gap-3 mb-2">
+            <div>
+              <div id="previewCode" class="sticker-code"></div>
+              <div id="previewName"></div>
+            </div>
+            <span id="previewCountry" class="status-chip"></span>
+          </div>
+          <p class="muted" id="previewCount"></p>
+          <p class="tiny" id="previewDuplicates"></p>
+        </div>
+        <div class="grid gap-3 md:grid-cols-2">
+          <button id="confirmQuickAdd" class="btn btn-primary" disabled><i data-lucide="plus"></i><span>Adicionar +1</span></button>
+          <button id="quickAddCancel" class="btn btn-secondary">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const db = new Dexie('StickerCollectionDB_v2');
+    db.version(1).stores({ stickers: 'id, code, country, name, quantity, duplicates, prefix, searchable' });
+
+    const state = {
+      stickers: [],
+      filtered: [],
+      selectedStatus: 'all',
+      quickAddSelection: null,
+      currentTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    };
+
+    const el = {
+      excelInput: document.getElementById('excelInput'),
+      kpiTotal: document.getElementById('kpiTotal'),
+      kpiHave: document.getElementById('kpiHave'),
+      kpiMissing: document.getElementById('kpiMissing'),
+      kpiDuplicates: document.getElementById('kpiDuplicates'),
+      overallProgressLabel: document.getElementById('overallProgressLabel'),
+      overallProgressBar: document.getElementById('overallProgressBar'),
+      countryProgressList: document.getElementById('countryProgressList'),
+      countryProgressCount: document.getElementById('countryProgressCount'),
+      searchInput: document.getElementById('searchInput'),
+      countryFilter: document.getElementById('countryFilter'),
+      groupFilter: document.getElementById('groupFilter'),
+      statusToggle: document.getElementById('statusToggle'),
+      stickerGrid: document.getElementById('stickerGrid'),
+      resultsCount: document.getElementById('resultsCount'),
+      resetFilters: document.getElementById('resetFilters'),
+      exportOutput: document.getElementById('exportOutput'),
+      albumFilter: document.getElementById('albumFilter'),
+      quickAddDialog: document.getElementById('quickAddDialog'),
+      importFeedback: document.getElementById('importFeedback'),
+      feedbackIcon: document.getElementById('feedbackIcon'),
+      feedbackTitle: document.getElementById('feedbackTitle'),
+      feedbackMessage: document.getElementById('feedbackMessage'),
+      quickAddInput: document.getElementById('quickAddInput'),
+      quickAddDropdown: document.getElementById('quickAddDropdown'),
+      quickAddPreview: document.getElementById('quickAddPreview'),
+      previewCode: document.getElementById('previewCode'),
+      previewName: document.getElementById('previewName'),
+      previewCountry: document.getElementById('previewCountry'),
+      previewCount: document.getElementById('previewCount'),
+      previewDuplicates: document.getElementById('previewDuplicates'),
+      confirmQuickAdd: document.getElementById('confirmQuickAdd'),
+      themeToggle: document.getElementById('themeToggle')
+    };
+
+    function setTheme(theme) {
+      state.currentTheme = theme;
+      document.documentElement.setAttribute('data-theme', theme);
+      el.themeToggle.innerHTML = theme === 'dark'
+        ? '<i data-lucide="sun-medium"></i><span>Claro</span>'
+        : '<i data-lucide="moon-star"></i><span>Escuro</span>';
+      lucide.createIcons();
+    }
+
+    function showImportFeedback(type, title, message) {
+      const styles = {
+        success: { chip: 'status-chip status-have', label: 'Sucesso' },
+        error: { chip: 'status-chip status-duplicate', label: 'Erro' },
+        warning: { chip: 'status-chip status-missing', label: 'Aviso' }
+      };
+      const current = styles[type] || styles.warning;
+      el.importFeedback.style.display = 'block';
+      el.feedbackIcon.className = current.chip;
+      el.feedbackIcon.textContent = current.label;
+      el.feedbackTitle.textContent = title;
+      el.feedbackMessage.innerHTML = message;
+    }
+
+    function normalizeRow(row, index) {
+      const values = Array.isArray(row) ? row : Object.values(row);
+      const id = Number(values[0] ?? 0);
+      const code = String(values[1] ?? '').trim();
+      const country = String(values[2] ?? '').trim();
+      const name = String(values[3] ?? '').trim();
+      const quantity = Number(values[4] ?? 0) || 0;
+      const rawDuplicates = Number(values[5] ?? Math.max(quantity - 1, 0)) || 0;
+
+      if (!id || !code) {
+        throw new Error(`Linha ${index + 2}: as colunas 1 (ID) e 2 (código) são obrigatórias.`);
+      }
+      if (quantity < 0) {
+        throw new Error(`Linha ${index + 2}: a quantidade não pode ser negativa.`);
+      }
+
+      const duplicates = Math.max(quantity - 1, 0, rawDuplicates);
+      const prefix = code.match(/^[A-Za-z]+/)?.[0] || 'OUT';
+      return {
+        id,
+        code,
+        country,
+        name,
+        quantity,
+        duplicates,
+        prefix,
+        searchable: `${code} ${country} ${name}`.toLowerCase()
+      };
+    }
+
+    async function loadFromDb() {
+      state.stickers = await db.stickers.orderBy('id').toArray();
+      hydrateFilters();
+      updateDashboard();
+      renderGrid();
+    }
+
+    function hydrateFilters() {
+      const countries = [...new Set(state.stickers.map(s => s.country).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+      const groups = [...new Set(state.stickers.map(s => s.prefix).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+      el.countryFilter.innerHTML = '<option value="all">Todos os países</option>' + countries.map(country => `<option value="${escapeHtml(country)}">${escapeHtml(country)}</option>`).join('');
+      el.groupFilter.innerHTML = '<option value="all">Todos os prefixos</option>' + groups.map(group => `<option value="${escapeHtml(group)}">${escapeHtml(group)}</option>`).join('');
+    }
+
+    function updateDashboard() {
+      const total = state.stickers.length;
+      const have = state.stickers.filter(s => s.quantity > 0).length;
+      const missing = total - have;
+      const duplicates = state.stickers.reduce((sum, s) => sum + Math.max(s.duplicates, 0), 0);
+      el.kpiTotal.textContent = total;
+      el.kpiHave.textContent = have;
+      el.kpiMissing.textContent = missing;
+      el.kpiDuplicates.textContent = duplicates;
+      const progress = total ? Math.round((have / total) * 100) : 0;
+      el.overallProgressLabel.textContent = `${progress}%`;
+      el.overallProgressBar.style.width = `${progress}%`;
+      renderCountryProgress();
+    }
+
+    function renderCountryProgress() {
+      const grouped = Object.values(state.stickers.reduce((acc, sticker) => {
+        const key = sticker.country || 'Sem país';
+        if (!acc[key]) acc[key] = { country: key, total: 0, have: 0 };
+        acc[key].total += 1;
+        if (sticker.quantity > 0) acc[key].have += 1;
+        return acc;
+      }, {})).sort((a,b) => (b.have / b.total) - (a.have / a.total));
+
+      el.countryProgressCount.textContent = `${grouped.length} países`;
+      if (!grouped.length) {
+        el.countryProgressList.innerHTML = '<div class="empty-state">Importe a planilha para ver o progresso por país.</div>';
+        return;
+      }
+      el.countryProgressList.innerHTML = grouped.map(item => {
+        const pct = item.total ? Math.round((item.have / item.total) * 100) : 0;
+        return `
+          <div>
+            <div class="flex justify-between gap-3 mb-2"><strong>${escapeHtml(item.country)}</strong><span class="tiny">${item.have}/${item.total} · ${pct}%</span></div>
+            <div class="progress-bar"><span style="width:${pct}%"></span></div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function getFilteredStickers() {
+      const query = el.searchInput.value.trim().toLowerCase();
+      const country = el.countryFilter.value;
+      const group = el.groupFilter.value;
+      const externalStatus = el.albumFilter.value !== 'all' ? el.albumFilter.value : state.selectedStatus;
+      return state.stickers.filter(sticker => {
+        const statusPass = externalStatus === 'all'
+          || (externalStatus === 'have' && sticker.quantity > 0)
+          || (externalStatus === 'missing' && sticker.quantity === 0)
+          || (externalStatus === 'duplicates' && sticker.duplicates > 0);
+        const queryPass = !query || sticker.searchable.includes(query);
+        const countryPass = country === 'all' || sticker.country === country;
+        const groupPass = group === 'all' || sticker.prefix === group;
+        return statusPass && queryPass && countryPass && groupPass;
+      });
+    }
+
+    function renderGrid() {
+      state.filtered = getFilteredStickers();
+      el.resultsCount.textContent = state.filtered.length;
+      if (!state.filtered.length) {
+        el.stickerGrid.innerHTML = '<div class="empty-state surface card" style="grid-column: 1 / -1;">Nenhuma figurinha corresponde aos filtros atuais.</div>';
+        return;
+      }
+      el.stickerGrid.innerHTML = state.filtered.map(sticker => {
+        const statusClass = sticker.duplicates > 0 ? 'duplicate' : sticker.quantity > 0 ? 'have' : '';
+        const statusChip = sticker.duplicates > 0
+          ? '<span class="status-chip status-duplicate">Duplicadas</span>'
+          : sticker.quantity > 0
+            ? '<span class="status-chip status-have">Tenho</span>'
+            : '<span class="status-chip status-missing">Preciso</span>';
+        return `
+          <article class="sticker-card ${statusClass}" data-id="${sticker.id}">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="sticker-code">${escapeHtml(sticker.code)}</div>
+                <div class="tiny">#${sticker.id}</div>
+              </div>
+              ${statusChip}
+            </div>
+            <div>
+              <strong>${escapeHtml(sticker.name || 'Sem nome')}</strong>
+              <p class="muted">${escapeHtml(sticker.country || 'Sem país')}</p>
+            </div>
+            <div class="sticker-meta">
+              <span class="status-chip status-have">Qtd ${sticker.quantity}</span>
+              <span class="status-chip ${sticker.duplicates > 0 ? 'status-duplicate' : 'status-missing'}">Rep ${sticker.duplicates}</span>
+              <span class="status-chip">${escapeHtml(sticker.prefix)}</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <button class="btn btn-secondary quick-minus" data-id="${sticker.id}"><i data-lucide="minus"></i></button>
+              <button class="btn btn-primary quick-plus" data-id="${sticker.id}"><i data-lucide="plus"></i></button>
+            </div>
+          </article>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    async function adjustQuantity(id, delta) {
+      const sticker = state.stickers.find(s => s.id === Number(id));
+      if (!sticker) return;
+      sticker.quantity = Math.max(0, sticker.quantity + delta);
+      sticker.duplicates = Math.max(sticker.quantity - 1, 0);
+      await db.stickers.put(sticker);
+      updateDashboard();
+      renderGrid();
+      if (state.quickAddSelection?.id === sticker.id) showQuickAddPreview(sticker);
+    }
+
+    function bindEvents() {
+      el.excelInput.addEventListener('change', importExcelFile);
+      el.searchInput.addEventListener('input', renderGrid);
+      el.countryFilter.addEventListener('change', renderGrid);
+      el.groupFilter.addEventListener('change', renderGrid);
+      el.albumFilter.addEventListener('change', renderGrid);
+      document.getElementById('refreshCountryProgress').addEventListener('click', updateDashboard);
+      document.getElementById('resetFilters').addEventListener('click', () => {
+        el.searchInput.value = '';
+        el.countryFilter.value = 'all';
+        el.groupFilter.value = 'all';
+        el.albumFilter.value = 'all';
+        state.selectedStatus = 'all';
+        [...el.statusToggle.querySelectorAll('button')].forEach(btn => btn.classList.toggle('active', btn.dataset.status === 'all'));
+        renderGrid();
+      });
+      el.statusToggle.addEventListener('click', event => {
+        const button = event.target.closest('button[data-status]');
+        if (!button) return;
+        state.selectedStatus = button.dataset.status;
+        [...el.statusToggle.querySelectorAll('button')].forEach(btn => btn.classList.toggle('active', btn === button));
+        renderGrid();
+      });
+      el.stickerGrid.addEventListener('click', event => {
+        const plus = event.target.closest('.quick-plus');
+        const minus = event.target.closest('.quick-minus');
+        if (plus) adjustQuantity(plus.dataset.id, 1);
+        if (minus) adjustQuantity(minus.dataset.id, -1);
+      });
+      document.getElementById('exportHaveCodes').addEventListener('click', () => exportCodeList('have'));
+      document.getElementById('exportMissingCodes').addEventListener('click', () => exportCodeList('missing'));
+      document.getElementById('copyExport').addEventListener('click', async () => {
+        if (!el.exportOutput.value) return;
+        await navigator.clipboard.writeText(el.exportOutput.value);
+      });
+      document.getElementById('exportWorkbook').addEventListener('click', () => exportWorkbook(state.stickers, 'colecao-copa-2026.xlsx'));
+      document.getElementById('exportDuplicatesWorkbook').addEventListener('click', () => exportWorkbook(state.stickers.filter(s => s.duplicates > 0), 'repetidas-copa-2026.xlsx'));
+      document.getElementById('openQuickAdd').addEventListener('click', openQuickAdd);
+      document.getElementById('closeQuickAdd').addEventListener('click', closeQuickAdd);
+      document.getElementById('quickAddCancel').addEventListener('click', closeQuickAdd);
+      el.quickAddDialog.addEventListener('click', event => { if (event.target === el.quickAddDialog) closeQuickAdd(); });
+      el.quickAddInput.addEventListener('input', handleQuickAddSearch);
+      el.quickAddDropdown.addEventListener('click', event => {
+        const item = event.target.closest('[data-id]');
+        if (!item) return;
+        selectQuickAdd(item.dataset.id);
+      });
+      el.confirmQuickAdd.addEventListener('click', async () => {
+        if (!state.quickAddSelection) return;
+        await adjustQuantity(state.quickAddSelection.id, 1);
+        closeQuickAdd();
+      });
+      el.themeToggle.addEventListener('click', () => setTheme(state.currentTheme === 'dark' ? 'light' : 'dark'));
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeQuickAdd();
+      });
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+      }
+    }
+
+    async function importExcelFile(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      try {
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, { type: 'array' });
+        if (!workbook.SheetNames.length) {
+          throw new Error('O arquivo não possui nenhuma aba disponível para importação.');
+        }
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+        if (rows.length < 2) {
+          throw new Error('A planilha precisa ter pelo menos 2 linhas: uma de cabeçalho e uma com dados.');
+        }
+
+        const header = rows[0];
+        const dataRows = rows.slice(1).filter(row => Array.isArray(row) && row.some(cell => String(cell).trim() !== ''));
+
+        if (header.length < 6) {
+          throw new Error('O cabeçalho encontrado tem menos de 6 colunas. O importador versão 2.0 espera as 6 primeiras colunas nesta ordem: ID, código, país, nome, quantidade e repetidas. Os nomes podem ser quaisquer, mas a posição das colunas precisa seguir essa ordem.');
+        }
+        if (!dataRows.length) {
+          throw new Error('A planilha contém cabeçalho, mas nenhuma linha de dados válida foi encontrada abaixo dele.');
+        }
+
+        const stickers = dataRows.map((row, index) => normalizeRow(row, index));
+        await db.stickers.clear();
+        await db.stickers.bulkPut(stickers);
+        await loadFromDb();
+        showImportFeedback(
+          'success',
+          'Importação concluída',
+          `Arquivo <strong>${file.name}</strong> importado com sucesso a partir da aba <strong>${sheetName}</strong>. Foram carregadas <strong>${stickers.length}</strong> figurinhas usando as 6 primeiras colunas da planilha, ignorando o nome do cabeçalho.`
+        );
+      } catch (error) {
+        showImportFeedback(
+          'error',
+          'Falha na importação',
+          `Não foi possível importar o arquivo <strong>${file?.name || ''}</strong>.<br>${escapeHtml(error.message || 'Erro desconhecido durante a leitura da planilha.')}`
+        );
+      } finally {
+        event.target.value = '';
+      }
+    }
+
+    function exportCodeList(type) {
+      const list = state.stickers
+        .filter(sticker => type === 'have' ? sticker.quantity > 0 : sticker.quantity === 0)
+        .map(sticker => sticker.code)
+        .join(', ');
+      el.exportOutput.value = list;
+    }
+
+    function exportWorkbook(rows, fileName) {
+      const exportRows = rows.map(sticker => ({
+        ID: sticker.id,
+        'código da figurinha': sticker.code,
+        país: sticker.country,
+        'Nome da figurinha/jogador': sticker.name,
+        'quantidade que possuo': sticker.quantity,
+        'quantas dessas são repetidas': sticker.duplicates
+      }));
+      const worksheet = XLSX.utils.json_to_sheet(exportRows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Coleção');
+      XLSX.writeFile(workbook, fileName);
+    }
+
+    function openQuickAdd() {
+      el.quickAddDialog.classList.add('open');
+      el.quickAddDialog.setAttribute('aria-hidden', 'false');
+      el.quickAddInput.value = '';
+      el.quickAddDropdown.innerHTML = '';
+      el.quickAddDropdown.classList.remove('open');
+      el.quickAddPreview.style.display = 'none';
+      el.confirmQuickAdd.disabled = true;
+      state.quickAddSelection = null;
+      setTimeout(() => el.quickAddInput.focus(), 60);
+    }
+
+    function closeQuickAdd() {
+      el.quickAddDialog.classList.remove('open');
+      el.quickAddDialog.setAttribute('aria-hidden', 'true');
+    }
+
+    function handleQuickAddSearch() {
+      const query = el.quickAddInput.value.trim().toLowerCase();
+      if (!query) {
+        el.quickAddDropdown.classList.remove('open');
+        el.quickAddDropdown.innerHTML = '';
+        return;
+      }
+      const matches = state.stickers.filter(sticker => sticker.searchable.includes(query)).slice(0, 12);
+      if (!matches.length) {
+        el.quickAddDropdown.innerHTML = '<div class="dropdown-item"><strong>Nenhum resultado</strong><span class="tiny">Tente outro código, país ou nome.</span></div>';
+        el.quickAddDropdown.classList.add('open');
+        return;
+      }
+      el.quickAddDropdown.innerHTML = matches.map(sticker => `
+        <button class="dropdown-item" data-id="${sticker.id}" type="button">
+          <strong>${escapeHtml(sticker.code)} · ${escapeHtml(sticker.name || 'Sem nome')}</strong>
+          <span class="tiny">${escapeHtml(sticker.country || 'Sem país')} · Quantidade atual ${sticker.quantity}</span>
+        </button>
+      `).join('');
+      el.quickAddDropdown.classList.add('open');
+    }
+
+    function selectQuickAdd(id) {
+      const sticker = state.stickers.find(item => item.id === Number(id));
+      if (!sticker) return;
+      state.quickAddSelection = sticker;
+      el.quickAddInput.value = `${sticker.code} · ${sticker.name}`;
+      el.quickAddDropdown.classList.remove('open');
+      showQuickAddPreview(sticker);
+    }
+
+    function showQuickAddPreview(sticker) {
+      el.quickAddPreview.style.display = 'block';
+      el.previewCode.textContent = sticker.code;
+      el.previewName.textContent = sticker.name || 'Sem nome';
+      el.previewCountry.textContent = sticker.country || 'Sem país';
+      el.previewCountry.className = 'status-chip ' + (sticker.quantity > 0 ? 'status-have' : 'status-missing');
+      el.previewCount.textContent = `Você possui ${sticker.quantity} agora. Ao adicionar mais uma, terá ${sticker.quantity + 1}.`;
+      el.previewDuplicates.textContent = `Repetidas após adicionar: ${Math.max(sticker.quantity, 0)}.`;
+      el.confirmQuickAdd.disabled = false;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    async function seedDemoIfEmpty() {
+      const count = await db.stickers.count();
+      if (count) return;
+      const demo = [
+        { id: 1, code: 'FWC1', country: 'Copa', name: 'Emblema oficial', quantity: 1, duplicates: 0, prefix: 'FWC', searchable: 'fwc1 copa emblema oficial' },
+        { id: 2, code: 'ARG10', country: 'Argentina', name: 'Lionel Messi', quantity: 2, duplicates: 1, prefix: 'ARG', searchable: 'arg10 argentina lionel messi' },
+        { id: 3, code: 'BRA7', country: 'Brasil', name: 'Vinicius Júnior', quantity: 0, duplicates: 0, prefix: 'BRA', searchable: 'bra7 brasil vinicius junior' },
+        { id: 4, code: 'CAN13', country: 'Canadá', name: 'Alphonso Davies', quantity: 1, duplicates: 0, prefix: 'CAN', searchable: 'can13 canada alphonso davies' }
+      ];
+      await db.stickers.bulkPut(demo);
+    }
+
+    async function init() {
+      setTheme(state.currentTheme);
+      bindEvents();
+      await seedDemoIfEmpty();
+      await loadFromDb();
+      lucide.createIcons();
+    }
+
+    init();
+  </script>
+</body>
+</html>
