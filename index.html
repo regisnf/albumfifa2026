@@ -757,6 +757,35 @@
 
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+
+        navigator.serviceWorker.ready.then(registration => {
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                showUpdateToast();
+              }
+            });
+          });
+        });
+      }
+
+      function showUpdateToast() {
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+          position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
+          background:#01696f; color:#fff; padding:12px 20px; border-radius:12px;
+          font-size:14px; display:flex; align-items:center; gap:12px;
+          box-shadow:0 4px 16px rgba(0,0,0,0.2); z-index:9999; white-space:nowrap;
+        `;
+        toast.innerHTML = `
+          <span>Nova versão disponível!</span>
+          <button onclick="window.location.reload()" style="
+            background:#fff; color:#01696f; border:none; padding:6px 14px;
+            border-radius:8px; font-weight:600; cursor:pointer; font-size:13px;
+          ">Atualizar</button>
+        `;
+        document.body.appendChild(toast);
       }
     }
 

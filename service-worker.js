@@ -1,4 +1,4 @@
-const CACHE_NAME = 'figurinhas-copa-2026-v2';
+const CACHE_NAME = 'figurinhas-copa-2026-v3.2';
 const ASSETS = [
   './index.html',
   './manifest.webmanifest'
@@ -18,6 +18,22 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
+
+  // Network-first for navigation requests — always fetch fresh HTML from server
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          return response;
+        })
+        .catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
+
+  // Cache-first for everything else
   event.respondWith(
     caches.match(event.request).then(cached => cached || fetch(event.request).then(response => {
       const clone = response.clone();
