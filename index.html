@@ -765,18 +765,32 @@
       let prefixText = '';
       if (type === 'have') {
         filtered = filtered.filter(s => s.quantity > 0);
-        prefixText = 'Essa é a lista das figurinhas que tenho: ';
+        prefixText = 'Essa é a lista das figurinhas que tenho:\n';
       } else if (type === 'missing') {
         filtered = filtered.filter(s => s.quantity === 0);
-        prefixText = 'Essa é a lista das figurinhas que preciso: ';
+        prefixText = 'Essa é a lista das figurinhas que preciso:\n';
       } else if (type === 'duplicates') {
         filtered = filtered.filter(s => (s.duplicates || 0) > 0);
-        prefixText = 'Essa é a lista das figurinhas repetidas: ';
+        prefixText = 'Essa é a lista das figurinhas repetidas:\n';
       }
+
+      const groups = {};
+      filtered.forEach(s => {
+        if (!groups[s.prefix]) groups[s.prefix] = [];
+        groups[s.prefix].push(parseInt(s.code.slice(s.prefix.length), 10));
+      });
+
+      let prefixKeys = Object.keys(groups);
       if (state.exportOrder === 'alpha') {
-        filtered = [...filtered].sort((a, b) => a.code.localeCompare(b.code));
+        prefixKeys.sort((a, b) => a.localeCompare(b));
       }
-      el.exportOutput.value = prefixText + filtered.map(s => s.code).join(', ');
+
+      const lines = prefixKeys.map(prefix => {
+        const nums = groups[prefix].sort((a, b) => a - b);
+        return `${prefix}: ${nums.join(',')}`;
+      });
+
+      el.exportOutput.value = prefixText + lines.join('\n');
     }
 
     async function syncPushToSheets() {
