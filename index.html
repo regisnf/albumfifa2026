@@ -863,7 +863,7 @@
       if (!confirmed) return;
       try {
         showFeedback('warning', 'Carregando…', 'Carregando coleção a partir do Google Sheets. Aguarde...');
-        const res = await fetch(SHEETS_ENDPOINT);
+        const res = await fetch(SHEETS_ENDPOINT, { cache: 'no-store' });
         const data = await res.json();
         if (!data || !Array.isArray(data.stickers)) throw new Error('Resposta inesperada do servidor. Esperado { stickers: [...] }.');
         const normalized = data.stickers.map(normalizeRowFromSheets).filter(Boolean).sort((a, b) => a.id - b.id);
