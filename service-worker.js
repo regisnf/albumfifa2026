@@ -1,4 +1,4 @@
-const CACHE_NAME = 'figurinhas-copa-2026-v3.2';
+const CACHE_NAME = 'figurinhas-copa-2026-v3.3';
 const ASSETS = [
   './index.html',
   './manifest.webmanifest'
@@ -18,6 +18,9 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
+
+  // Let the browser handle requests that explicitly opt out of caching
+  if (event.request.cache === 'no-store') return;
 
   // Network-first for navigation requests — always fetch fresh HTML from server
   if (event.request.mode === 'navigate') {
